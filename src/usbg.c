@@ -1324,10 +1324,12 @@ size_t usbg_get_configfs_path_len(usbg_state *s)
 int usbg_get_configfs_path(usbg_state *s, char *buf, size_t len)
 {
 	int ret = USBG_SUCCESS;
-	if (s && buf)
+	if (s && buf) {
 		strncpy(buf, s->path, len);
-	else
+		buf[len - 1] = '\0';
+	} else {
 		ret = USBG_ERROR_INVALID_PARAM;
+	}
 
 	return ret;
 }
@@ -1712,10 +1714,12 @@ size_t usbg_get_gadget_name_len(usbg_gadget *g)
 int usbg_get_gadget_name(usbg_gadget *g, char *buf, size_t len)
 {
 	int ret = USBG_SUCCESS;
-	if (g && buf)
+	if (g && buf) {
 		strncpy(buf, g->name, len);
-	else
+		buf[len - 1] = '\0';
+	} else {
 		ret = USBG_ERROR_INVALID_PARAM;
+	}
 
 	return ret;
 }
@@ -2093,10 +2097,12 @@ size_t usbg_get_config_label_len(usbg_config *c)
 int usbg_get_config_label(usbg_config *c, char *buf, size_t len)
 {
 	int ret = USBG_SUCCESS;
-	if (c && buf)
+	if (c && buf) {
 		strncpy(buf, c->label, len);
-	else
+		buf[len - 1] = '\0';
+	} else {
 		ret = USBG_ERROR_INVALID_PARAM;
+	}
 
 	return ret;
 }
@@ -2114,10 +2120,12 @@ size_t usbg_get_function_instance_len(usbg_function *f)
 int usbg_get_function_instance(usbg_function *f, char *buf, size_t len)
 {
 	int ret = USBG_SUCCESS;
-	if (f && buf)
+	if (f && buf) {
 		strncpy(buf, f->instance, len);
-	else
+		buf[len - 1] = '\0';
+	} else {
 		ret = USBG_ERROR_INVALID_PARAM;
+	}
 
 	return ret;
 }
@@ -2273,10 +2281,12 @@ size_t usbg_get_binding_name_len(usbg_binding *b)
 int usbg_get_binding_name(usbg_binding *b, char *buf, size_t len)
 {
 	int ret = USBG_SUCCESS;
-	if (b && buf)
+	if (b && buf) {
 		strncpy(buf, b->name, len);
-	else
+		buf[len - 1] = '\0';
+	} else {
 		ret = USBG_ERROR_INVALID_PARAM;
+	}
 
 	return ret;
 }
