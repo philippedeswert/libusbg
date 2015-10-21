@@ -15,14 +15,10 @@
  */
 
 /**
- * @file gadget-ffs.c
- * @example gadget-ffs.c
- * This is an example of how to create gadget with FunctionFS based functions
- * in two ways. After executing this program gadget will not be enabled
- * because ffs instances should be mounted and both descriptors and strings
- * should be written to ep0.
- * For more details about FunctionFS please refer to FunctionFS documentation
- * in linux kernel repository.
+ * @file gadget-ms.c
+ * @example gadget-ms.c
+ * This is an example of how to create gadget with mass storage function
+ * with two luns.
  */
 
 #include <errno.h>
@@ -33,12 +29,12 @@
 #define VENDOR          0x1d6b
 #define PRODUCT         0x0104
 
-int main(void)
+int main(int argc, char **argv)
 {
 	usbg_state *s;
 	usbg_gadget *g;
 	usbg_config *c;
-	usbg_function *f_ffs1, *f_ffs2;
+	usbg_function *f_ms;
 	int ret = -EINVAL;
 	int usbg_ret;
 
@@ -59,15 +55,51 @@ int main(void)
 		.str_prd = "Bar Gadget" /* Product string */
 	};
 
-	usbg_config_strs c_strs = {
-		.configuration = "2xFFS"
+	usbg_f_ms_lun_attrs f_ms_luns_array[] = {
+		{
+			.id = -1, /* allows to place in any position */
+			.cdrom = 1,
+			.ro = 0,
+			.nofua = 0,
+			.removable = 1,
+			.filename = "",
+		}, {
+			.id = -1, /* allows to place in any position */
+			.cdrom = 0,
+			.ro = 0,
+			.nofua = 0,
+			.removable = 1,
+			.filename = argv[1],
+		}
+	};
+
+	usbg_f_ms_lun_attrs *f_ms_luns[] = {
+		/*
+		 * When id in lun structure is below 0 we can place it in any
+		 * arbitrary position
+		 */
+		&f_ms_luns_array[1],
+		&f_ms_luns_array[0],
+		NULL,
 	};
 
 	usbg_function_attrs f_attrs = {
-		.attrs.ffs = {
-			.dev_name = "my_awesome_dev_name",
+		.header.attrs_type = USBG_F_ATTRS_MS,
+		.attrs.ms = {
+			.stall = 0,
+			.nluns = 2,
+			.luns = f_ms_luns,
 		},
 	};
+
+	usbg_config_strs c_strs = {
+			"1xMass Storage"
+	};
+
+	if (argc < 2) {
+		fprintf(stderr, "Usage: gadget-ms file\n");
+		goto out1;
+	}
 
 	usbg_ret = usbg_init("/sys/kernel/config", &s);
 	if (usbg_ret != USBG_SUCCESS) {
@@ -85,19 +117,10 @@ int main(void)
 		goto out2;
 	}
 
-	usbg_ret = usbg_create_function(g, F_FFS, "my_dev_name", NULL, &f_ffs1);
+	usbg_ret = usbg_create_function(g, F_MASS_STORAGE, "my_reader",
+					&f_attrs, &f_ms);
 	if (usbg_ret != USBG_SUCCESS) {
-		fprintf(stderr, "Error creating ffs1 function\n");
-		fprintf(stderr, "Error: %s : %s\n", usbg_error_name(usbg_ret),
-				usbg_strerror(usbg_ret));
-		goto out2;
-	}
-
-	/* When NULL is passed as instance name, dev_name take from f_attrs
-	   is used as instance name for this function */
-	usbg_ret = usbg_create_function(g, F_FFS, NULL, &f_attrs, &f_ffs2);
-	if (usbg_ret != USBG_SUCCESS) {
-		fprintf(stderr, "Error creating ffs2 function\n");
+		fprintf(stderr, "Error creating mass storage function\n");
 		fprintf(stderr, "Error: %s : %s\n", usbg_error_name(usbg_ret),
 				usbg_strerror(usbg_ret));
 		goto out2;
@@ -112,39 +135,21 @@ int main(void)
 		goto out2;
 	}
 
-	usbg_ret = usbg_add_config_function(c, "some_name_here", f_ffs1);
+	usbg_ret = usbg_add_config_function(c, "some_name_here", f_ms);
 	if (usbg_ret != USBG_SUCCESS) {
-		fprintf(stderr, "Error adding ffs1\n");
+		fprintf(stderr, "Error adding ms function\n");
 		fprintf(stderr, "Error: %s : %s\n", usbg_error_name(usbg_ret),
 				usbg_strerror(usbg_ret));
 		goto out2;
 	}
 
-	usbg_ret = usbg_add_config_function(c, "some_name_here_too", f_ffs2);
+	usbg_ret = usbg_enable_gadget(g, DEFAULT_UDC);
 	if (usbg_ret != USBG_SUCCESS) {
-		fprintf(stderr, "Error adding ffs2\n");
+		fprintf(stderr, "Error enabling gadget\n");
 		fprintf(stderr, "Error: %s : %s\n", usbg_error_name(usbg_ret),
 				usbg_strerror(usbg_ret));
 		goto out2;
 	}
-
-	fprintf(stdout, "2xFFS gadget has been created.\n"
-		"Enable it after preparing your functions.\n");
-
-	/*
-	 * Here we end up with two created ffs instances but they are not
-	 * fully operational. Now we have to do step by step:
-	 * 1) Mount both instances:
-	 *    $ mount my_dev_name -t functionfs /path/to/mount/dir1
-	 *    $ mount my_awesome_dev_name -t functionfs /path/to/mount/dir2
-	 *
-	 * 2) Run ffs daemons for both instances:
-	 *    $ my-ffs-daemon /path/to/mount/dir1
-	 *    $ my-ffs-daemon /path/to/mount/dir2
-	 *
-	 * 3) Enable your gadget:
-	 *    $ echo "my_udc_name" > /sys/kernel/config/usb_gadget/g1/UDC
-	 */
 
 	ret = 0;
 
